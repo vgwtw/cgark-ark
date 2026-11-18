@@ -1552,15 +1552,40 @@ function build3D(){
         tops.push([[-77.5, -55], tTop], [[-76.5, -63], .6 + wallH + 1.1]); return;
       }
       if(st === 'expo'){
-        const wallTop = Y(15); extrude('expo', pts, .6, wallTop);
-        const f = pca(pts);
-        for(let k = -1; k <= 1; k++){
-          const v = new THREE.Mesh(new THREE.CylinderGeometry(f.wid / 6, f.wid / 6, f.len, 20, 1, true, -Math.PI / 2, Math.PI), STY.expo.roof);
-          v.rotation.z = Math.PI / 2; v.rotation.y = -f.ang; v.scale.y = 1;
-          const ox = -Math.sin(f.ang) * k * f.wid / 3, oz = Math.cos(f.ang) * k * f.wid / 3;
-          v.position.set(f.c[0] + ox, wallTop, f.c[1] + oz); H.add(v);
+        // 高雄展覽館 (checked against photos): one long hall under a white mosaic shell with two humps running its
+        // full length; the shell comes down to the ground along both sides and frames two arched glass ends (an "m").
+        const f = pca(pts), ux = Math.cos(f.ang), uz = Math.sin(f.ang), L = f.len, W = f.wid, Hm = Y(h1 * .82) - .6;
+        const bump = (u, c) => { const d = (u - c) / .27; return d * d < 1 ? Math.pow(1 - d * d, .32) : 0; };
+        const prof = u => .6 + Hm * Math.max(bump(u, .27), bump(u, .73));
+        const P = (a, b, y) => [f.c[0] + ux * a - uz * b, y, f.c[1] + uz * a + ux * b];
+        const N = 26, Mx = 44, pos = [], uv = [];
+        for(let i = 0; i < N; i++) for(let k = 0; k < Mx; k++){
+          const a0 = -L / 2 + L * i / N, a1 = -L / 2 + L * (i + 1) / N, u0 = k / Mx, u1 = (k + 1) / Mx;
+          const q = [P(a0, (u0 - .5) * W, prof(u0)), P(a1, (u0 - .5) * W, prof(u0)), P(a1, (u1 - .5) * W, prof(u1)), P(a0, (u1 - .5) * W, prof(u1))];
+          const t = [[a0 / 2, u0 * W / 2], [a1 / 2, u0 * W / 2], [a1 / 2, u1 * W / 2], [a0 / 2, u1 * W / 2]];
+          [0, 1, 2, 0, 2, 3].forEach(n => { pos.push(...q[n]); uv.push(...t[n]); });
         }
-        tops.push([c, wallTop + f.wid / 6]); return;
+        const shellTex = canvasTex(64, 64, g2 => { g2.fillStyle = '#eef1f3'; g2.fillRect(0, 0, 64, 64); for(let y = 0; y < 64; y += 8) for(let x = 0; x < 64; x += 8){ const v = Math.random(); if(v < .3){ g2.fillStyle = v < .08 ? '#b3bcc2' : '#d6dce0'; g2.beginPath(); g2.moveTo(x, y + 8); g2.lineTo(x + 4, y); g2.lineTo(x + 8, y + 8); g2.closePath(); g2.fill(); } } });
+        shellTex.wrapS = shellTex.wrapT = THREE.RepeatWrapping;
+        const sg = new THREE.BufferGeometry(); sg.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); sg.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); sg.computeVertexNormals();
+        H.add(new THREE.Mesh(sg, M({map:shellTex})));
+        // arched glass ends, set slightly back under the shell
+        const glassTex = canvasTex(64, 64, g2 => { g2.fillStyle = '#3f7f8c'; g2.fillRect(0, 0, 64, 64); g2.fillStyle = '#7fb8c2'; for(let x = 0; x < 64; x += 8) g2.fillRect(x, 0, 1.5, 64); for(let y = 0; y < 64; y += 16) g2.fillRect(0, y, 64, 1.5); });
+        glassTex.wrapS = glassTex.wrapT = THREE.RepeatWrapping;
+        [-1, 1].forEach(e => {
+          const a = e * (L / 2 - .8), gp = [], guv = [];
+          for(let k = 0; k < Mx; k++){
+            const u0 = k / Mx, u1 = (k + 1) / Mx, y0 = prof(u0) - .15, y1 = prof(u1) - .15;
+            const q = [P(a, (u0 - .5) * W, .6), P(a, (u1 - .5) * W, .6), P(a, (u1 - .5) * W, y1), P(a, (u0 - .5) * W, y0)];
+            const t = [[u0 * W / 1.2, 0], [u1 * W / 1.2, 0], [u1 * W / 1.2, y1 / 1.2], [u0 * W / 1.2, y0 / 1.2]];
+            [0, 1, 2, 0, 2, 3].forEach(n => { gp.push(...q[n]); guv.push(...t[n]); });
+          }
+          const gg = new THREE.BufferGeometry(); gg.setAttribute('position', new THREE.Float32BufferAttribute(gp, 3)); gg.setAttribute('uv', new THREE.Float32BufferAttribute(guv, 2)); gg.computeVertexNormals();
+          H.add(new THREE.Mesh(gg, M({map:glassTex})));
+          // the slim column where the two arches meet
+          const mid = P(a + e * .5, 0, 0); cyl(H, .12, .12, prof(.5) - .6, '#e9eef2', mid[0], (prof(.5) + .6) / 2, mid[2], {seg:8});
+        });
+        tops.push([f.c, .6 + Hm]); return;
       }
       if(st === 'lib'){
         extrude('lib', pts, Y(5), Y(h1));

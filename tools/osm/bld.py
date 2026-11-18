@@ -21,7 +21,19 @@ for e in b:
     t=e.get('tags',{})
     rings=[]
     if e['type']=='way': rings=[e['geometry']]
-    else: rings=[m['geometry'] for m in e.get('members',[]) if m.get('role')=='outer' and 'geometry' in m]
+    else:
+        # stitch outer member ways that share end points into closed rings
+        segs=[[(q['lat'],q['lon']) for q in m['geometry']] for m in e.get('members',[]) if m.get('role')=='outer' and 'geometry' in m]
+        rings=[]
+        while segs:
+            ring=segs.pop(0)
+            changed=True
+            while changed and ring[0]!=ring[-1]:
+                changed=False
+                for k,sg in enumerate(segs):
+                    if sg[0]==ring[-1]: ring+=sg[1:]; segs.pop(k); changed=True; break
+                    if sg[-1]==ring[-1]: ring+=sg[::-1][1:]; segs.pop(k); changed=True; break
+            rings.append([{'lat':a,'lon':b} for a,b in ring])
     for g in rings:
         p=[scene(q['lat'],q['lon']) for q in g]
         if len(p)>1 and p[0]==p[-1]: p=p[:-1]
