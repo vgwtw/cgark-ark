@@ -40,7 +40,7 @@ for o in B:
     h0=o['mh'] or 0
     pts=[round(v,1) for xy in o['p'] for v in xy]
     out.append([st,round(h0,1),round(h1,1),o['roof'][:4]]+pts)
-LM=[['高雄港埠旅運中心',12.3,-12],['音浪塔',-77,-64],['高雄流行音樂中心・海音館',-77,-53],['珊瑚礁群',-51,-79],['鯨魚堤岸',-35,-53],['高雄展覽館',60.5,-1.5],['85 大樓',57.9,-47.1],['高雄市立圖書館總館',80.3,-39],['中鋼集團總部大樓',107.6,10.9],['棧貳庫',-190.5,-14],['駁二藝術特區',-156,-50]]
+LM=[['高雄港埠旅運中心',12.3,-12],['音浪塔',-77.5,-55],['高雄流行音樂中心・海音館',-76.5,-63],['珊瑚礁群',-51,-79],['鯨魚堤岸',-35,-53],['高雄展覽館',60.5,-1.5],['85 大樓',57.9,-47.1],['高雄市立圖書館總館',80.3,-39],['中鋼集團總部大樓',107.6,10.9],['棧貳庫',-190.5,-14],['駁二藝術特區',-156,-50]]
 js='/* 高雄港周邊建築（OpenStreetMap 建築外框與高度，© OpenStreetMap contributors，ODbL）。每筆：[樣式, 底高m, 頂高m, 屋頂, x1,z1, x2,z2, ...]，座標同 ARK_HARBOR。 */\nwindow.ARK_BUILDINGS = '+json.dumps({'b':out,'lm':LM},ensure_ascii=False,separators=(',',':'))+';\n'
 open('../../docs/harbor-buildings.js','w').write(js)
 import collections; print(len(out),'buildings', len(js)//1024,'KB', collections.Counter(b[0] for b in out))

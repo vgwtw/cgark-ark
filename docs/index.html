@@ -1425,6 +1425,9 @@ function build3D(){
       if(kind === 'hex'){ for(let r = 0; r < 6; r++) for(let c = 0; c < 6; c++){ const cx = c * 24 + (r % 2) * 12, cy = r * 21 + 6; g2.beginPath(); for(let k = 0; k < 6; k++){ const a = Math.PI / 3 * k + Math.PI / 6; g2.lineTo(cx + Math.cos(a) * 9, cy + Math.sin(a) * 9); } g2.closePath(); g2.fillStyle = '#3b4652'; g2.fill(); g2.stroke(); } }
       else if(kind === 'tri'){ for(let k = -128; k < 256; k += 21){ g2.beginPath(); g2.moveTo(k, 0); g2.lineTo(k + 128, 128); g2.moveTo(k + 128, 0); g2.lineTo(k, 128); g2.stroke(); } for(let y = 0; y < 128; y += 32){ g2.beginPath(); g2.moveTo(0, y); g2.lineTo(128, y); g2.stroke(); } }
       else if(kind === 'diamond'){ for(let k = -128; k < 256; k += 32){ g2.beginPath(); g2.moveTo(k, 0); g2.lineTo(k + 128, 128); g2.moveTo(k + 128, 0); g2.lineTo(k, 128); g2.stroke(); } }
+      else if(kind === 'hexTile'){ g2.fillStyle = bg; g2.fillRect(0, 0, 128, 128); g2.strokeStyle = line; g2.lineWidth = 2; for(let r = -1; r < 7; r++) for(let c = -1; c < 7; c++){ const cx = c * 24 + (r % 2 ? 12 : 0), cy = r * 21; g2.beginPath(); for(let k = 0; k < 6; k++){ const a = Math.PI / 3 * k + Math.PI / 6; g2.lineTo(cx + Math.cos(a) * 13.5, cy + Math.sin(a) * 13.5); } g2.closePath(); g2.stroke(); } }
+      else if(kind === 'towerSkin'){ g2.fillStyle = bg; g2.fillRect(0, 0, 128, 128); for(let r = 0; r < 4; r++) for(let c = 0; c < 4; c++){ if((r * 3 + c) % 3) continue; const cx = c * 32 + 16 + (r % 2) * 16, cy = r * 32 + 16; g2.beginPath(); for(let k = 0; k < 6; k++){ const a = Math.PI / 3 * k; g2.lineTo(cx + Math.cos(a) * 11, cy + Math.sin(a) * 11); } g2.closePath(); g2.fillStyle = '#e9eef2'; g2.fill(); g2.fillStyle = '#5b6a76'; g2.beginPath(); for(let k = 0; k < 6; k++){ const a = Math.PI / 3 * k + Math.PI / 6; g2.lineTo(cx + Math.cos(a) * 5, cy + Math.sin(a) * 5); } g2.closePath(); g2.fill(); } g2.strokeStyle = line; g2.lineWidth = 3.5; for(let k = -128; k < 256; k += 16){ g2.beginPath(); g2.moveTo(k, 0); g2.lineTo(k + 74, 128); g2.moveTo(k + 74, 0); g2.lineTo(k, 128); g2.stroke(); } for(let y = 0; y < 128; y += 32){ g2.beginPath(); g2.moveTo(0, y); g2.lineTo(128, y); g2.stroke(); } }
+      else if(kind === 'vtruss'){ g2.fillStyle = 'rgba(255,214,150,.18)'; for(let x = 4; x < 128; x += 10) g2.fillRect(x, 30, 5, 90); g2.strokeStyle = line; g2.lineWidth = 5; g2.beginPath(); g2.moveTo(0, 128); g2.lineTo(32, 6); g2.lineTo(64, 128); g2.lineTo(96, 6); g2.lineTo(128, 128); g2.stroke(); g2.fillStyle = line; g2.fillRect(0, 0, 128, 8); }
       else if(kind === 'rib'){ for(let x = 0; x < 128; x += 8){ g2.fillStyle = line; g2.fillRect(x, 0, 3, 128); } }
       else if(kind === 'bands'){ for(let y = 0; y < 128; y += 21){ g2.fillStyle = line; g2.fillRect(0, y, 128, 4); } g2.fillStyle = 'rgba(255,220,150,.5)'; for(let y = 6; y < 128; y += 21) for(let x = 2; x < 128; x += 9) if(Math.random() < .6) g2.fillRect(x, y, 6, 10); }
     }); t.wrapS = t.wrapT = THREE.RepeatWrapping; return t; };
@@ -1525,14 +1528,28 @@ function build3D(){
         tops.push([c, yTop]); return;
       }
       if(st === 'kmc'){
-        // 海音館: the hall's hexagonal-grid roof rises northward into the two 音浪塔 towers
-        const zs = pts.map(p => p[1]), zS = Math.max(...zs), zN = Math.min(...zs);
-        extrude('kmc', pts, .6, p => { const e = THREE.MathUtils.clamp((zS - p[1]) / (zS - zN) * 1.6, 0, 1); return Y(14 + 26 * e * e); });
-        const crystal = (x, z, mods) => { let y = Y(30); mods.forEach(([rb, rt, h]) => { const m = new THREE.Mesh(new THREE.CylinderGeometry(rt, rb, h * V, 6), texMat(lattice('#c3ced6', '#ffffff', 'tri'), 3, 2)); m.material.flatShading = true; m.position.set(x, y + h * V / 2, z); m.rotation.y = Math.PI / 6; H.add(m); y += h * V; }); return y; };
-        const tTop = crystal(-77.6, -64.6, [[3.6, 4.3, 1.6], [4.3, 4.2, 1.8], [4.2, 3.4, 1.5], [3.4, 2.6, 1]]);
-        crystal(-76.6, -59.6, [[3.2, 3.6, 1.2], [3.6, 3, 1.2], [3, 2.4, .8]]);
-        box(H, 4.6, 3.4 * V, 1.4, '#1d2a36', -77, Y(30) + 1.7 * V, -62.2);
-        tops.push([[-77, -64], tTop], [[-77, -53], Y(30)]); return;
+        // 高雄流行音樂中心 (checked against satellite imagery and photos):
+        // 海音館 is the big oval hall on the north part of the footprint — a low, hexagon-tiled white roof over
+        // dark glass walls that lean outward, wrapped in white V-shaped steel; the two 音浪塔 towers stand off its
+        // south-west side on the narrow south part, the tall one against the hall and the short one beyond it.
+        const north = pts.filter(p => p[1] < -57.5);
+        const xs = north.map(p => p[0]), zs = north.map(p => p[1]);
+        const hc = [(Math.min(...xs) + Math.max(...xs)) / 2 + .3, (Math.min(...zs) + Math.max(...zs)) / 2 - .2];
+        const rx = (Math.max(...xs) - Math.min(...xs)) / 2 + .2, rz = (Math.max(...zs) - Math.min(...zs)) / 2 + .4;
+        const wallH = Y(19) - .6, SEG = 48;
+        const wall = new THREE.CylinderGeometry(1, .9, wallH, SEG, 1, true);
+        const hall = new THREE.Mesh(wall, texMat(lattice('#26313c', '#eef2f5', 'vtruss'), 16, 1));
+        hall.scale.set(rx, 1, rz); hall.position.set(hc[0], .6 + wallH / 2, hc[1]); H.add(hall);
+        const roofTex = texMat(lattice('#f4f6f8', '#b8c4cc', 'hexTile'), 3, 3);
+        const roof = new THREE.Mesh(new THREE.SphereGeometry(1, SEG, 8, 0, Math.PI * 2, 0, Math.PI / 2), roofTex);
+        roof.scale.set(rx * 1.04, 1.1, rz * 1.04); roof.position.set(hc[0], .6 + wallH, hc[1]); H.add(roof);
+        const rim = new THREE.Mesh(new THREE.TorusGeometry(1, .035, 6, SEG), M({color:'#f4f6f8'}));
+        rim.rotation.x = Math.PI / 2; rim.scale.set(rx * 1.04, rz * 1.04, 1); rim.position.set(hc[0], .6 + wallH, hc[1]); H.add(rim);
+        const crystal = (x, z, mods) => { let y = .6; mods.forEach(([rb, rt, h]) => { const m = new THREE.Mesh(new THREE.CylinderGeometry(rt, rb, h * V, 6), texMat(lattice('#8496a3', '#ffffff', 'towerSkin'), 2, 1)); m.material.flatShading = true; m.material.emissive = new THREE.Color('#2a3036'); m.position.set(x, y + h * V / 2, z); m.rotation.y = Math.PI / 6; H.add(m); y += h * V; }); return y; };
+        const tTop = crystal(-77.4, -55.6, [[2.8, 3.4, 1.6], [3.4, 3.5, 1.8], [3.5, 2.9, 1.6], [2.9, 2.2, 1.2]]);
+        const sTop = crystal(-78.9, -50.8, [[2.3, 2.8, 1.2], [2.8, 2.4, 1.2], [2.4, 1.8, .9]]);
+        box(H, 3.2, 3.4 * V, 1.2, '#1d2a36', -78.2, .6 + 1.7 * V, -53.2, {ry:.3});
+        tops.push([[-77.5, -55], tTop], [[-76.5, -63], .6 + wallH + 1.1]); return;
       }
       if(st === 'expo'){
         const wallTop = Y(15); extrude('expo', pts, .6, wallTop);
