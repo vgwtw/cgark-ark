@@ -1437,7 +1437,7 @@ function build3D(){
       t85:  {wall:M({map:winTex('#1f4f55', '#7fd6c8', '#18393e')}), roof:M({color:'#2f6a70'}), tile:[1.1, 1.3]},
       csc:  {wall:M({map:tileTex(lattice('#cfd6dc', '#ffffff', 'diamond'))}), roof:M({color:'#cfd6dc'}), tile:[3.5, 4.5]},
       lib:  {wall:M({map:tileTex(lattice('#2d4655', '#e9eef2', 'bands'))}), roof:M({color:'#4f9a52'}), tile:[6, 3.4]},
-      term: {wall:M({map:tileTex(lattice('#3c5568', '#c9d0d6', 'bands'))}), roof:M({color:'#c4cbd1'}), tile:[5, 3]},
+      term: {wall:M({map:tileTex(lattice('#43494f', '#b3babf', 'bands'))}), roof:M({color:'#c4cbd1'}), tile:[5, 2.2]},
       expo: {wall:M({color:'#4f8c96'}), roof:M({color:'#d5dade'}), tile:[4, 4]},
       whale:{wall:M({map:winTex('#d5d9dc', '#8f9aa3', '#c7cccf')}), roof:M({map:(() => { const t = canvasTex(64, 64, g2 => { g2.fillStyle = '#6aa85a'; g2.fillRect(0, 0, 64, 64); g2.fillStyle = '#d9dcd6'; g2.fillRect(0, 0, 18, 64); g2.fillStyle = '#b9bdb6'; for(let y = 0; y < 64; y += 8) g2.fillRect(0, y, 18, 2); }); t.wrapS = t.wrapT = THREE.RepeatWrapping; return t; })()}), tile:[1.4, 1.1]},
       kmc:  {wall:M({map:tileTex(lattice('#c3ced6', '#ffffff', 'tri'))}), roof:M({map:tileTex(lattice('#f2f5f7', '#c8d3da', 'hex'))}), tile:[3, 3]}
@@ -1558,12 +1558,32 @@ function build3D(){
         tops.push([c, Y(h1)]); return;
       }
       if(st === 'term'){
-        extrude('term', pts, .6, Y(h1));
-        // the flared, vertically ribbed tower on the terminal's wider east block
-        const tw = new THREE.Mesh(new THREE.CylinderGeometry(2.5, 1.6, Y(65) - .6, 40, 1), texMat(lattice('#5b616a', '#8d949c', 'rib'), 10, 3));
-        tw.position.set(12.4, (Y(65) + .6) / 2, -12.2); H.add(tw);
-        cyl(H, 2.5, 2.5, .25, '#3b4048', 12.4, Y(65), -12.2, {seg:40});
-        tops.push([[12.3, -12], Y(65)]); return;
+        // 高雄港埠旅運中心 (checked against photos): a long, low terminal of stacked bands with silver horizontal
+        // louvres; its upper roof sweeps up in a curve into the dark, vertically ribbed tower at the east end,
+        // which widens towards the top — together they read like a sail.
+        const TX = 12.4, TZ = -11.8, TOP = Y(68);
+        extrude('term', pts, .6, Y(12));
+        // the swept upper roof: a half-elliptical band that narrows and rises along the terminal into the tower
+        (() => {
+          const N = 40, Mseg = 12, x0 = -9, x1 = TX - .4, base = Y(12), pos = [], uv = [];
+          const at = (i, j) => {
+            const k = i / N, x = x0 + (x1 - x0) * k, e = Math.pow(k, 2.3);
+            const hw = 3.1 - .9 * e, top = Y(20) + (TOP * .9 - Y(20)) * e, zc = -10.9 - .9 * k;
+            const t = -1 + 2 * j / Mseg, z = zc + t * hw, y = base + (top - base) * Math.sqrt(Math.max(0, 1 - t * t));
+            return [x, y, z, (x - x0) / 2.2, j / Mseg * 3];
+          };
+          for(let i = 0; i < N; i++) for(let j = 0; j < Mseg; j++){
+            const q = [at(i, j), at(i + 1, j), at(i + 1, j + 1), at(i, j + 1)];
+            [0, 1, 2, 0, 2, 3].forEach(n => { pos.push(q[n][0], q[n][1], q[n][2]); uv.push(q[n][3], q[n][4]); });
+          }
+          const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); g.computeVertexNormals();
+          const sweepMat = texMat(lattice('#4b5159', '#b3babf', 'bands'), 1, 1); sweepMat.side = THREE.DoubleSide;
+          H.add(new THREE.Mesh(g, sweepMat));
+        })();
+        const tw = new THREE.Mesh(new THREE.CylinderGeometry(1, .7, TOP - .6, 48, 6), texMat(lattice('#4b5159', '#8f969e', 'rib'), 16, 1));
+        tw.scale.set(2.7, 1, 2.2); tw.position.set(TX, (TOP + .6) / 2, TZ); H.add(tw);
+        const cap = new THREE.Mesh(new THREE.CircleGeometry(1, 48), M({color:'#2f343a'})); cap.rotation.x = -Math.PI / 2; cap.scale.set(2.7, 2.2, 1); cap.position.set(TX, TOP, TZ); H.add(cap);
+        tops.push([[12.3, -12], TOP]); return;
       }
       extrude(st, pts, Y(h0), Y(h1), roof === 'pyra' ? 'pyra' : null);
       tops.push([c, Y(h1)]);
