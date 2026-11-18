@@ -916,7 +916,7 @@ function build3D(){
   const ROSTER = JSON.parse(JSON.stringify(window.ARK_ROSTER || {guide:{name:'大副', role:'巡艙導覽', line:'跟我來！', look:{body:'male-c', hat:'captain', shirt:'white', pants:'navy'}}, staff:[]}));
   const SKILLS = window.ARK_SKILLS || [];
   const EXTRA_ANIMALS = window.ARK_EXTRA_ANIMALS || [];
-  const editMode = (() => { try{ if(location.hash === '#edit') sessionStorage.setItem('ark-edit', '1'); return sessionStorage.getItem('ark-edit') === '1'; }catch(e){ return location.hash === '#edit'; } })();
+  const editMode = (() => { try{ if(location.hash === '#edit' || /(^|[?&])edit(=|&|$)/.test(location.search)) sessionStorage.setItem('ark-edit', '1'); return sessionStorage.getItem('ark-edit') === '1'; }catch(e){ return location.hash === '#edit'; } })();
   if(editMode){
     try{
       const draft = JSON.parse(localStorage.getItem('ark-roster-draft') || 'null');
@@ -1448,6 +1448,7 @@ function build3D(){
       lib:  {wall:M({map:tileTex(lattice('#2d4655', '#e9eef2', 'bands'))}), roof:M({color:'#4f9a52'}), tile:[6, 3.4]},
       term: {wall:M({map:tileTex(lattice('#3c5568', '#c9d0d6', 'bands'))}), roof:M({color:'#c4cbd1'}), tile:[5, 3]},
       expo: {wall:M({color:'#4f8c96'}), roof:M({color:'#d5dade'}), tile:[4, 4]},
+      whale:{wall:M({map:winTex('#d5d9dc', '#8f9aa3', '#c7cccf')}), roof:M({map:(() => { const t = canvasTex(64, 64, g2 => { g2.fillStyle = '#6aa85a'; g2.fillRect(0, 0, 64, 64); g2.fillStyle = '#d9dcd6'; g2.fillRect(0, 0, 18, 64); g2.fillStyle = '#b9bdb6'; for(let y = 0; y < 64; y += 8) g2.fillRect(0, y, 18, 2); }); t.wrapS = t.wrapT = THREE.RepeatWrapping; return t; })()}), tile:[1.4, 1.1]},
       kmc:  {wall:M({map:tileTex(lattice('#c3ced6', '#ffffff', 'tri'))}), roof:M({map:tileTex(lattice('#f2f5f7', '#c8d3da', 'hex'))}), tile:[3, 3]}
     };
     const acc = {};
@@ -1489,9 +1490,30 @@ function build3D(){
       if(pts.length < 3) return;
       const c = centroid(pts);
       if(st === 'whale'){
-        const f = pca(pts), d = new THREE.Mesh(new THREE.SphereGeometry(1, 14, 8, 0, Math.PI * 2, 0, Math.PI / 2), texMat(lattice('#f2f5f7', '#b7c4cc', 'diamond'), 3, 2));
-        d.material.flatShading = true; d.scale.set(f.len / 2 + .2, Y(h1) - .6, f.wid / 2 + .2); d.rotation.y = -f.ang; d.position.set(f.c[0], .6, f.c[1]); H.add(d);
-        tops.push([c, Y(h1)]); return;
+        // 鯨魚堤岸: low pale-concrete halls whose lawn roof slopes up from the ground like a whale's back, with steps you can climb
+        const f = pca(pts), ux = Math.cos(f.ang), uz = Math.sin(f.ang), L = f.len, Wd = f.wid, Hm = Y(Math.max(h1, 12)) - .6;
+        const prof = t => { t = THREE.MathUtils.clamp(t, 0, 1); return .6 + Hm * (t < .82 ? .06 + .94 * Math.pow(t / .82, 1.25) : 1 - (t - .82) * .6); };
+        const P = (a, b, y) => [f.c[0] + ux * a - uz * b, y, f.c[1] + uz * a + ux * b];
+        const SEG = 14, pos = [], wpos = [], wuv = [], suv = [];
+        for(let k = 0; k < SEG; k++){
+          const t0 = k / SEG, t1 = (k + 1) / SEG, a0 = -L / 2 + L * t0, a1 = -L / 2 + L * t1, y0 = prof(t0), y1 = prof(t1);
+          [[-Wd / 2, Wd / 2]].forEach(([b0, b1]) => {
+            const q = [P(a0, b0, y0), P(a1, b0, y1), P(a1, b1, y1), P(a0, b1, y0)];
+            pos.push(...q[0], ...q[1], ...q[2], ...q[0], ...q[2], ...q[3]);
+            suv.push(0, t0 * 8, 0, t1 * 8, 1, t1 * 8, 0, t0 * 8, 1, t1 * 8, 1, t0 * 8);
+          });
+          [-Wd / 2, Wd / 2].forEach(b => {
+            const g0 = P(a0, b, .6), g1 = P(a1, b, .6), u0 = P(a0, b, y0), u1 = P(a1, b, y1);
+            wpos.push(...g0, ...g1, ...u1, ...g0, ...u1, ...u0);
+            const s0 = (a0 + L / 2) / 1.4, s1 = (a1 + L / 2) / 1.4;
+            wuv.push(s0, 0, s1, 0, s1, (y1 - .6) / 1.1, s0, 0, s1, (y1 - .6) / 1.1, s0, (y0 - .6) / 1.1);
+          });
+        }
+        [0, 1].forEach(end => { const a = end ? L / 2 : -L / 2, y = prof(end), p0 = P(a, -Wd / 2, .6), p1 = P(a, Wd / 2, .6), p2 = P(a, Wd / 2, y), p3 = P(a, -Wd / 2, y);
+          wpos.push(...p0, ...p1, ...p2, ...p0, ...p2, ...p3); wuv.push(0, 0, Wd / 1.4, 0, Wd / 1.4, (y - .6) / 1.1, 0, 0, Wd / 1.4, (y - .6) / 1.1, 0, (y - .6) / 1.1); });
+        const mk = (arr, uv, m) => { const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(arr, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); g.computeVertexNormals(); H.add(new THREE.Mesh(g, m)); };
+        mk(pos, suv, STY.whale.roof); mk(wpos, wuv, STY.whale.wall);
+        tops.push([c, .6 + Hm]); return;
       }
       if(st === 'reef'){
         const yTop = Y(h1);
